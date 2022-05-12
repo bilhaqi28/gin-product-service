@@ -1,16 +1,22 @@
 package route
 
 import (
+	"net/http"
+
 	"github.com/bilhaqi28/gin-product-service/controller"
 	"github.com/gin-gonic/gin"
 )
 
 func NewRouter(controller controller.MainController) *gin.Engine {
 	router := gin.Default()
-	v1 := router.Group("/service/product")
+	router.StaticFS("/public", http.Dir("public"))
+	service := router.Group("/service")
 	{
-		v1.GET("/all", func(c *gin.Context) {
+		service.GET("/products", func(c *gin.Context) {
 			controller.ProductController().FindAll(c)
+		})
+		service.POST("/product", func(c *gin.Context) {
+			controller.ProductController().Store(c)
 		})
 	}
 

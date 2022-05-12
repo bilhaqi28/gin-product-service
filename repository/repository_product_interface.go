@@ -9,4 +9,5 @@ import (
 
 type RepositoryProduct interface {
 	FindAll(ctx context.Context, tx *sql.Tx) []domain.Product
+	Store(ctx context.Context, tx *sql.Tx, product domain.Product) domain.Product
 }
