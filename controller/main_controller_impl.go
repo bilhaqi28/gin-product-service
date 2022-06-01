@@ -3,8 +3,7 @@ package controller
 import (
 	"database/sql"
 
-	"github.com/bilhaqi28/gin-product-service/repository"
-	"github.com/bilhaqi28/gin-product-service/service"
+	"github.com/bilhaqi28/gin-product-service/dependecies"
 )
 
 type MainControllerImpl struct {
@@ -13,8 +12,7 @@ type MainControllerImpl struct {
 
 // productController implements MainController
 func (main *MainControllerImpl) ProductController() ControllerProduct {
-	repository := repository.NewRepositoryProduct()
-	service := service.NewServiceProduct(repository, main.db)
+	service := dependecies.InitializedServer()
 	controller := NewControllerProduct(service)
 	return controller
 }
