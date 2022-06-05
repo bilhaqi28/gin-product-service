@@ -1,19 +1,22 @@
 package controller
 
 import (
-	"log"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/bilhaqi28/gin-product-service/cache"
 	"github.com/bilhaqi28/gin-product-service/helper"
 	"github.com/bilhaqi28/gin-product-service/model/web/request"
 	"github.com/bilhaqi28/gin-product-service/model/web/response"
 	"github.com/bilhaqi28/gin-product-service/service"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 )
 
 type ControllerProductImpl struct {
 	serviceProduct service.ServiceProduct
+	cacheProduct   cache.ProductCache
 }
 
 // Destroy implements ControllerProduct
@@ -77,7 +80,16 @@ func (controller *ControllerProductImpl) FindById(c *gin.Context) {
 	productId := c.Param("id")
 	id, err := strconv.Atoi(productId)
 	helper.PanicIfError(err)
-	productWeb, err := controller.serviceProduct.FindById(c.Request.Context(), id)
+	// cek terlebihdahulu pada cache jika tidak ada maka baru akses service
+	var productWeb response.ProductWeb
+	productWeb, err = controller.cacheProduct.Get(c.Request.Context(), "Product"+productId)
+	if err == redis.Nil || err != nil {
+		productWeb, err = controller.serviceProduct.FindById(c.Request.Context(), id)
+		if err == nil {
+			err = controller.cacheProduct.Set(c.Request.Context(), "Product"+productId, productWeb, 10)
+			helper.PanicIfError(err)
+		}
+	}
 	if err != nil {
 		errorResponse := response.ErrorResponse{
 			Code:   http.StatusBadRequest,
@@ -97,8 +109,14 @@ func (controller *ControllerProductImpl) FindById(c *gin.Context) {
 
 // FindAll implements ControllerProduct
 func (controller *ControllerProductImpl) FindAll(c *gin.Context) {
-	log.Print(c.Keys["token_jwt"])
-	productWeb := controller.serviceProduct.FindAll(c.Request.Context())
+	// cek terlebihdahulu pada cache jika tidak ada maka baru akses service
+	var productWeb []response.ProductWeb
+	productWeb, err := controller.cacheProduct.GetAll(c.Request.Context(), "ProductAll")
+	if err == redis.Nil || err != nil {
+		productWeb = controller.serviceProduct.FindAll(c.Request.Context())
+		err = controller.cacheProduct.SetAll(c.Request.Context(), "ProductAll", productWeb, 20*time.Second)
+		helper.PanicIfError(err)
+	}
 	apiResponse := response.ApiResponse{
 		Code:   http.StatusOK,
 		Status: true,
@@ -134,8 +152,9 @@ func (controller *ControllerProductImpl) Store(c *gin.Context) {
 
 }
 
-func NewControllerProduct(serviceProduct service.ServiceProduct) ControllerProduct {
+func NewControllerProduct(serviceProduct service.ServiceProduct, cache cache.ProductCache) ControllerProduct {
 	return &ControllerProductImpl{
 		serviceProduct: serviceProduct,
+		cacheProduct:   cache,
 	}
 }

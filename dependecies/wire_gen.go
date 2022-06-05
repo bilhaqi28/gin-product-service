@@ -7,16 +7,20 @@
 package dependecies
 
 import (
+	"github.com/bilhaqi28/gin-product-service/cache"
 	"github.com/bilhaqi28/gin-product-service/config"
+	"github.com/bilhaqi28/gin-product-service/controller"
 	"github.com/bilhaqi28/gin-product-service/repository"
 	"github.com/bilhaqi28/gin-product-service/service"
 )
 
 // Injectors from injector.go:
 
-func InitializedServer() service.ServiceProduct {
+func NewControllerProductWire() controller.ControllerProduct {
 	repositoryProduct := repository.NewRepositoryProduct()
 	db := config.NewDB()
 	serviceProduct := service.NewServiceProduct(repositoryProduct, db)
-	return serviceProduct
+	productCache := cache.NewProductCache()
+	controllerProduct := controller.NewControllerProduct(serviceProduct, productCache)
+	return controllerProduct
 }
